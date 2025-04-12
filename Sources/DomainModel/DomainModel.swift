@@ -129,10 +129,59 @@ public class Job {
 // Person
 //
 public class Person {
+    var firstName : String
+    var lastName : String
+    var age : Int
+    var job : Job?
+    var spouse : Person?
+    
+    init(firstName: String, lastName: String, age: Int) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.age = age
+    }
+    
+    func toString() -> String {
+        return "[Person: firstName:\(firstName) lastName:\(lastName) age:\(age) job:\(job) spouse:\(spouse)]"
+    }
+    
 }
 
 ////////////////////////////////////
 // Family
 //
 public class Family {
+    var members : [Person] = [];
+    
+    init(spouse1 : Person, spouse2 : Person) {
+        guard spouse1.spouse == nil && spouse2.spouse == nil else {
+            return // I would usually throw an error...
+        }
+        spouse1.spouse = spouse2;
+        spouse2.spouse = spouse1;
+        self.members = [spouse1, spouse2];
+    }
+    
+    func haveChild(_ person : Person) -> Bool {
+        guard person.age > 21 else {
+            return false
+        }
+        members.append(person);
+        return true;
+    }
+    
+    func householdIncome() -> Int {
+        guard members.count > 0 else {
+            return 0;
+        }
+        
+        var count = 0;
+        
+        for i in 0...members.count-1 {
+            if let jobSalary = members[i].job?.calculateIncome(2000) {
+                count = count + jobSalary;
+            }
+        }
+        return count;
+    }
 }
