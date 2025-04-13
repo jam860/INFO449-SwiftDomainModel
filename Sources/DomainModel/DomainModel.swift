@@ -13,6 +13,13 @@ public struct Money {
     var currency: String;
     
     init(amount: Int, currency: String) {
+        let currencyArr : [String] = ["USD", "EUR", "CAN", "GBP"]
+        guard currencyArr.contains(currency) else {
+            self.amount = 0
+            self.currency = "USD"
+            return
+        }
+        
         self.amount = amount
         self.currency = currency
     }
@@ -81,8 +88,17 @@ public class Job {
     var type : JobType
     
     init(title: String, type: JobType) {
-        self.title = title
         self.type = type
+        self.title = title
+
+        switch type {
+            case let .Hourly(salary):
+                if salary < 0 {
+                    self.type = .Hourly(0)
+                }
+            case let .Salary(salary):
+                self.type = type;
+        }
     }
     
     func calculateIncome(_ hours: Int) -> Int {
@@ -95,12 +111,20 @@ public class Job {
     }
     
     func raise(byAmount: Int) {
-
         switch type {
             case let .Hourly(hourlySalary):
-                self.type = .Hourly(hourlySalary + Double(byAmount));
+                if (byAmount < 0) {
+                    self.type = .Hourly(hourlySalary + Double(byAmount))
+                } else {
+                    self.type = .Hourly(hourlySalary + Double(byAmount));
+                }
             case let .Salary(annualSaluary):
-                self.type = .Salary(annualSaluary + UInt(byAmount));
+                if (byAmount < 0) {
+                    var byAmountIfNegative = -byAmount;
+                    self.type = .Salary(annualSaluary - UInt(byAmountIfNegative))
+                } else {
+                    self.type = .Salary(annualSaluary + UInt(byAmount));
+                }
         }
     }
     
@@ -123,17 +147,49 @@ public class Job {
         }
 
     }
+    
+    func convert() -> Bool {
+        switch type {
+            case let .Hourly(hourlySalary):
+                self.type = .Salary(UInt(hourlySalary) * 2000);
+                return true
+            case let .Salary(annualSalary):
+                return false
+        }
+    }
 }
 
 ////////////////////////////////////
 // Person
 //
 public class Person {
-    var firstName : String
-    var lastName : String
+    var firstName : String?
+    var lastName : String?
     var age : Int
-    var job : Job?
-    var spouse : Person?
+    var _job : Job?
+    var _spouse : Person?
+    
+    var job : Job? {
+        get {
+            return _job
+        }
+        set(job) {
+            if (age > 21) {
+                _job = job;
+            }
+        }
+    }
+    
+    var spouse : Person? {
+        get {
+            return _spouse
+        }
+        set(spouse) {
+            if (age > 21) {
+                _spouse = spouse
+            }
+        }
+    }
     
     init(firstName: String, lastName: String, age: Int) {
         self.firstName = firstName
@@ -141,8 +197,29 @@ public class Person {
         self.age = age
     }
     
+    init(firstName: String, age: Int) {
+        self.firstName = firstName
+        self.age = age
+    }
+    
+    init(lastName: String, age: Int) {
+        self.lastName = lastName
+        self.age = age
+    }
+    
     func toString() -> String {
-        return "[Person: firstName:\(firstName) lastName:\(lastName) age:\(age) job:\(job) spouse:\(spouse)]"
+//        var firstNameNotOptional : String
+//        var lastNameNotOptional : String
+        if let lastNameUnwrap = lastName, let firstNameUnwrap = firstName {
+            return "[Person: firstName:\(firstNameUnwrap) lastName:\(lastNameUnwrap) age:\(age) job:\(_job) spouse:\(_spouse)]"
+        } else if let firstNameUnwrap = firstName {
+            return "[Person: firstName:\(firstNameUnwrap) lastName:\(lastName) age:\(age) job:\(_job) spouse:\(_spouse)]"
+        }
+        else if let lastNameUnwrap = lastName {
+            return "[Person: firstName:\(firstName) lastName:\(lastNameUnwrap) age:\(age) job:\(_job) spouse:\(_spouse)]"
+        } else {
+            return "[Person: firstName:\(firstName) lastName:\(lastName) age:\(age) job:\(_job) spouse:\(_spouse)]"
+        }
     }
     
 }
@@ -154,20 +231,34 @@ public class Family {
     var members : [Person] = [];
     
     init(spouse1 : Person, spouse2 : Person) {
-        guard spouse1.spouse == nil && spouse2.spouse == nil else {
+        if spouse1.spouse == nil && spouse2.spouse == nil {
+            spouse1.spouse = spouse2;
+            spouse2.spouse = spouse1;
+            self.members = [spouse1, spouse2];
+        } else if spouse1.spouse?.firstName == spouse2.firstName || spouse2.spouse?.firstName == spouse1.firstName  {
+            spouse1.spouse = spouse2;
+            spouse2.spouse = spouse1;
+            self.members = [spouse1, spouse2];
+        } //in the future, this wouldn't work because people can have the same first names, so maybe a unique id would be better to compare people
+        else {
             return // I would usually throw an error...
         }
-        spouse1.spouse = spouse2;
-        spouse2.spouse = spouse1;
-        self.members = [spouse1, spouse2];
+        
     }
     
     func haveChild(_ person : Person) -> Bool {
-        guard person.age > 21 else {
-            return false
+        var flag = false;
+        for i in 0...members.count-1 {
+            if members[i].age > 21 {
+                flag = true;
+            }
         }
-        members.append(person);
-        return true;
+        if (flag == true) {
+            members.append(person);
+            return true;
+        } else {
+            return false;
+        }
     }
     
     func householdIncome() -> Int {
